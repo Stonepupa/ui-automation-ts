@@ -1,0 +1,8 @@
+node_modules/
+test-results/
+reports/
+playwright-report/
+*.png
+.env
+debug_*.ts
+explore_*.ts
