@@ -138,11 +138,13 @@ export class TypeConfigPage extends BasePage {
     }
     await this.page.waitForTimeout(3000);
 
-    // Step 2: 等待设计器加载
+    // Step 2: 等待设计器加载完成
     await this.webFrame.locator('iframe[name="bpmSetting"]').waitFor({ state: 'visible', timeout: 15_000 });
-    await this.bpmSettingFrame.locator('.whiteLine').waitFor({ state: 'visible', timeout: 15_000 });
-    await this.bpmSettingFrame.locator('.el-loading-mask').first().waitFor({ state: 'hidden', timeout: 15_000 }).catch(() => {});
-    await this.page.waitForTimeout(1000);
+    // 等待 loading 消失或节点出现（用「工单池」节点作为加载完成标志）
+    await this.bpmSettingFrame.locator('.el-loading-mask').first().waitFor({ state: 'hidden', timeout: 30_000 }).catch(() => {});
+    await this.bpmSettingFrame.locator('.node-wrap-box').filter({ hasText: '工单池' }).first()
+      .waitFor({ state: 'visible', timeout: 30_000 });
+    await this.page.waitForTimeout(500);
 
     // Step 3: 绑定主表单字段
     await this.bindMainForm();
