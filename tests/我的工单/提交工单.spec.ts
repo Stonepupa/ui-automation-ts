@@ -1,40 +1,42 @@
 /**
- * 我的工单 — 提交工单
+ * 我的工单 - 提交工单时的表单字段校验
  *
- * 校验点：
- *   - 必填拦截：必填字段为空点提交，提示拦截
- *   - 默认值为空：新增工单时字段默认为空
+ * 前置条件：系统中已存在已启用并发布的「ui自动化测试工单类型」
+ *
+ * 测试校验点：
+ *   1. 必填字段为空提交 — 应提示「必填」「请输入」「不能为空」
+ *   2. 新增工单字段默认值 — 输入框默认值应为空
  */
 import { test, expect } from '../../fixtures/test_fixtures';
 import { WorkOrderPage } from '../../pages/work_order_page';
 
-/** 已有的稳定类型，确保在「我的工单」类型树中存在 */
-const EXISTING_TYPE = 'ui自动化测试工单类型';
+/** 系统中已有的稳定工单类型，已启用已发布，且字段设置了必填 */
+const 已有类型 = 'ui自动化测试工单类型';
 
-test.describe('提交工单', () => {
+test.describe('提交工单 - 字段校验', () => {
 
-  test('必填字段为空 → 提交时拦截提示', async ({ typeConfigPage, authenticatedPage }) => {
+  test('必填字段为空点提交: 不填任何字段 → 点击提交 → 出现必填拦截提示', async ({ typeConfigPage, authenticatedPage }) => {
     await typeConfigPage.navigateToTypeConfig();
 
     const wo = new WorkOrderPage(authenticatedPage);
     await wo.navigateToMyWorkOrder('测试项目');
-    await wo.webFrame.getByText(EXISTING_TYPE).first().click();
+    await wo.webFrame.getByText(已有类型).first().click();
     await wo.clickCreate();
     await wo.submitWorkOrder();
 
-    // 应提示必填
+    // 应出现必填提示
     await expect(wo.workorderCreateFrame.getByText(/必填|请输入|不能为空/)).toBeVisible();
   });
 
-  test('新增工单 → 字段默认值为空', async ({ typeConfigPage, authenticatedPage }) => {
+  test('新增工单字段默认值为空: 选择类型 → 点击新增 → 输入框默认值为空字符串', async ({ typeConfigPage, authenticatedPage }) => {
     await typeConfigPage.navigateToTypeConfig();
 
     const wo = new WorkOrderPage(authenticatedPage);
     await wo.navigateToMyWorkOrder('测试项目');
-    await wo.webFrame.getByText(EXISTING_TYPE).first().click();
+    await wo.webFrame.getByText(已有类型).first().click();
     await wo.clickCreate();
 
-    // 输入框默认值为空
+    // 输入框默认应为空
     const input = wo.workorderCreateFrame.getByRole('textbox', { name: '请输入' });
     await expect(input).toHaveValue('');
   });
