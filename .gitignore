@@ -6,3 +6,7 @@ playwright-report/
 .env
 debug_*.ts
 explore_*.ts
+
+# 保留测试资源
+!data/assets/
+!data/assets/*.png

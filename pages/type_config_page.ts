@@ -93,13 +93,17 @@ export class TypeConfigPage extends BasePage {
   }
 
   async uploadIcon(filePath: string) {
-    await this.webFrame.locator('i').nth(1).click();
-    await this.webFrame.locator('input[name="file"]').first().setInputFiles(filePath);
+    // B端图标：第一个 .avatar-uploader 里的 input[type="file"]
+    await this.webFrame.locator('.avatar-uploader').first()
+      .locator('input[type="file"]').setInputFiles(filePath);
+    await this.page.waitForTimeout(1000);
   }
 
   async uploadBanner(filePath: string) {
-    await this.webFrame.locator('i').nth(1).click();
-    await this.webFrame.locator('input[name="file"]').nth(1).setInputFiles(filePath);
+    // C端图标：第二个 .avatar-uploader 里的 input[type="file"]
+    await this.webFrame.locator('.avatar-uploader').nth(1)
+      .locator('input[type="file"]').setInputFiles(filePath);
+    await this.page.waitForTimeout(1000);
   }
 
   // ── 表单设计 ──

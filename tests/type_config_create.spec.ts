@@ -3,6 +3,7 @@
  */
 import { test } from '../fixtures/test_fixtures';
 import { uniqueTypeName } from '../data/test_data';
+import * as path from 'path';
 
 test.describe('工单类型 — 创建与发布（冒烟）', () => {
 
@@ -13,6 +14,8 @@ test.describe('工单类型 — 创建与发布（冒烟）', () => {
     // 基本信息
     await typeConfigPage.clickAdd();
     await typeConfigPage.fillTypeName(typeName);
+    await typeConfigPage.uploadIcon(path.resolve(__dirname, '../data/assets/test_icon.png'));
+    await typeConfigPage.uploadBanner(path.resolve(__dirname, '../data/assets/test_banner.png'));
     await typeConfigPage.clickNextStep();
 
     // 表单设计

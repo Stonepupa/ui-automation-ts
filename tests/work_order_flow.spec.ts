@@ -4,6 +4,7 @@
 import { test, expect } from '../fixtures/test_fixtures';
 import { WorkOrderPage } from '../pages/work_order_page';
 import { uniqueTypeName } from '../data/test_data';
+import * as path from 'path';
 
 /** 已有的稳定类型，确保在「我的工单」tree 中存在 */
 const EXISTING_TYPE = 'ui自动化测试工单类型';
@@ -13,6 +14,8 @@ async function createType(tc: any, typeName: string) {
   await tc.navigateToTypeConfig();
   await tc.clickAdd();
   await tc.fillTypeName(typeName);
+  await tc.uploadIcon(path.resolve(__dirname, '../data/assets/test_icon.png'));
+  await tc.uploadBanner(path.resolve(__dirname, '../data/assets/test_banner.png'));
   await tc.clickNextStep();
   await tc.addSingleLineField();
   await tc.setRequired();
