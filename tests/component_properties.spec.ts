@@ -18,7 +18,7 @@ async function createType(tc: any, typeName: string) {
   await tc.setRequired();
   await tc.clickNextStep();
   await tc.configureProcess();
-  await tc.publishAndSelectProject('测试项目');
+  await tc.publishAndSelectProject('测试项目', typeName);
 }
 
 test.describe('组件特性 — 元属性校验', () => {

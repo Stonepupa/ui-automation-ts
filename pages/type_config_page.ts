@@ -26,19 +26,35 @@ export class TypeConfigPage extends BasePage {
 
   // ── 导航 ──
   async navigateToTypeConfig() {
-    // 如果已在类型配置页面（webiframe 可见），跳过导航
+    // 如果已在类型配置页面（webiframe 可见且列表已加载），跳过导航
     const webIframe = this.page.locator('iframe[name="webiframe"]');
     if (await webIframe.isVisible({ timeout: 2000 }).catch(() => false)) {
-      // 验证确实在类型配置页（列表页有「新 增」按钮）
-      const hasAddBtn = await this.webFrame.getByRole('button', { name: ' 新 增' }).isVisible({ timeout: 2000 }).catch(() => false);
-      if (hasAddBtn) return;
+      // 验证确实在类型配置页（列表页有「新 增」按钮 或「重 置」按钮）
+      const hasAddBtn = await this.webFrame.getByRole('button', { name: /新 增/ }).isVisible({ timeout: 2000 }).catch(() => false);
+      const hasResetBtn = await this.webFrame.getByRole('button', { name: '重 置' }).isVisible({ timeout: 2000 }).catch(() => false);
+      if (hasAddBtn || hasResetBtn) {
+        console.log('[navigateToTypeConfig] 已在类型配置页，跳过导航');
+        return;
+      }
     }
 
-    await this.page.getByRole('textbox', { name: '全部' }).click();
-    await this.page.waitForTimeout(500);
-    await this.page.getByText('测试项目').click();
-    await this.page.waitForTimeout(2000);
+    // 确保不在欢迎页 — 如果 URL 跳到了首页，先处理
+    const currentUrl = this.page.url();
+    if (currentUrl.includes('/home') || currentUrl.includes('/welcome')) {
+      console.log('[navigateToTypeConfig] 当前在欢迎页，通过侧边栏导航');
+    }
 
+    // 项目选择
+    try {
+      await this.page.getByRole('textbox', { name: '全部' }).click({ timeout: 3000 });
+      await this.page.waitForTimeout(500);
+      await this.page.getByText('测试项目').click({ timeout: 3000 });
+      await this.page.waitForTimeout(2000);
+    } catch {
+      console.log('[navigateToTypeConfig] 项目选择跳过（可能已选中）');
+    }
+
+    // 侧边栏导航
     await this.page.getByText('运营管理', { exact: true }).click();
     await this.page.waitForTimeout(2000);
 
@@ -49,7 +65,9 @@ export class TypeConfigPage extends BasePage {
     await this.page.waitForTimeout(3000);
 
     await this.page.locator('iframe[name="webiframe"]').waitFor({ state: 'visible', timeout: 15_000 });
-    await this.page.waitForTimeout(500);
+    await this.page.waitForTimeout(1000);
+
+    console.log(`[navigateToTypeConfig] 导航完成，当前 URL: ${this.page.url()}`);
   }
 
   // ── 类型列表操作 ──
@@ -201,6 +219,8 @@ export class TypeConfigPage extends BasePage {
    * 2. 点击流程行中的「选择项目」
    * 3. 在穿梭框弹框中选择项目并右移到右侧已选列表
    * 4. 确定 → 完成 → 回到工单类型列表
+   * 5. 打开「是否启用」开关
+   * 6. 点击操作列中的「发布」菜单按钮 → 确认发布
    *
    * 穿梭框操作要点：
    * - Element UI Transfer 组件，左侧面板是未选列表，右侧是已选列表
@@ -208,7 +228,7 @@ export class TypeConfigPage extends BasePage {
    * - 选中后必须验证 checkbox 变为 checked，再点击右移按钮
    * - 验证项目出现在右侧面板后，才点击弹框的「确定」
    */
-  async publishAndSelectProject(projectName: string = '测试项目') {
+  async publishAndSelectProject(projectName: string = '测试项目', typeName?: string) {
     // Step 1: 点击发布
     await this.webFrame.getByRole('button', { name: '发布' }).click();
     await this.page.waitForTimeout(5000);
@@ -315,7 +335,103 @@ export class TypeConfigPage extends BasePage {
 
     // 确保 webiframe 就绪
     await this.page.locator('iframe[name="webiframe"]').waitFor({ state: 'visible', timeout: 10_000 }).catch(() => {});
-    await this.page.waitForTimeout(500);
+    await this.page.waitForTimeout(2000);
+
+    // Step 6: 回到工单类型列表后，启用 + 发布菜单
+    // 新创建的类型一定在列表第一条，用 typeName 确认
+    await this.page.waitForTimeout(3000);
+
+    // 等待列表数据加载
+    await this.webFrame.locator('tbody tr').first().waitFor({ state: 'visible', timeout: 15_000 });
+    await this.page.waitForTimeout(1000);
+
+    // 获取第一行
+    const firstRow = this.webFrame.locator('tbody tr').first();
+    const firstRowText = await firstRow.textContent().catch(() => '');
+    console.log(`[publishAndSelectProject] 第一条: "${firstRowText?.trim()?.substring(0, 120)}"`);
+
+    // 验证第一行是否包含当前类型名称
+    if (typeName && firstRowText && !firstRowText.includes(typeName)) {
+      console.log(`[publishAndSelectProject] WARNING: 第一条不包含 "${typeName}"，可能列表未刷新`);
+      // 尝试点击重置刷新
+      const resetBtn = this.resetButton;
+      if (await resetBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+        await resetBtn.click();
+        await this.page.waitForTimeout(3000);
+        const refreshed = await this.webFrame.locator('tbody tr').first().textContent().catch(() => '');
+        console.log(`[publishAndSelectProject] 重置后第一条: "${refreshed?.trim()?.substring(0, 120)}"`);
+      }
+    }
+
+    // 打开「是否启用」开关
+    const enableSwitch = firstRow.locator('.el-switch');
+    const switchChecked = await enableSwitch.locator('.is-checked').isVisible({ timeout: 2000 }).catch(() => false);
+    console.log(`[publishAndSelectProject] 开关 checked=${switchChecked}`);
+
+    if (!switchChecked) {
+      console.log('[publishAndSelectProject] 打开「是否启用」开关');
+      await enableSwitch.click();
+      await this.page.waitForTimeout(3000);
+    }
+
+    // 点击「发布菜单」— 开关打开后重新获取第一行（DOM 已更新）
+    console.log('[publishAndSelectProject] 查找「发布菜单」');
+    await this.page.waitForTimeout(1000);
+
+    // 发布菜单在表格右侧固定列（el-table__fixed-right）里，和主表是分开渲染的
+    // 需要定位固定列的第一行
+    const fixedRight = this.webFrame.locator('.el-table__fixed-right');
+    const fixedRow = fixedRight.locator('tbody tr').first();
+    const fixedRowText = await fixedRow.textContent().catch(() => '');
+    console.log(`[publishAndSelectProject] 固定列第一行: "${fixedRowText?.trim()?.substring(0, 120)}"`);
+
+    // 在固定列第一行中查找包含"发布菜单"的 button
+    let publishMenuBtn = fixedRow.getByRole('button', { name: '发布菜单' });
+    let publishVisible = await publishMenuBtn.isVisible({ timeout: 3000 }).catch(() => false);
+
+    if (!publishVisible) {
+      const buttons = fixedRow.locator('button.el-button--text');
+      const btnCount = await buttons.count().catch(() => 0);
+      for (let i = 0; i < btnCount; i++) {
+        const text = (await buttons.nth(i).textContent().catch(() => '')).trim();
+        console.log(`[publishAndSelectProject]   fixed button[${i}]: "${text}"`);
+        if (text.includes('发布菜单')) {
+          publishMenuBtn = buttons.nth(i);
+          publishVisible = true;
+          break;
+        }
+      }
+    }
+
+    if (publishVisible) {
+      console.log('[publishAndSelectProject] 点击「发布菜单」');
+      // fixed-right 列可能有隐藏副本，强制点击可见的那个
+      await publishMenuBtn.click({ force: true });
+      await this.page.waitForTimeout(2000);
+
+      const pubConfirmBtn = this.webFrame.getByRole('button', { name: '确 定' });
+      if (await pubConfirmBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+        await pubConfirmBtn.click();
+        await this.page.waitForTimeout(2000);
+      }
+    } else {
+      console.log('[publishAndSelectProject] WARNING: 未找到「发布菜单」');
+    }
+
+    if (publishVisible) {
+      console.log('[publishAndSelectProject] 点击「发布菜单」');
+      // fixed-right 列可能导致 Playwright 找到 hidden 副本，用 force 强制点击
+      await publishMenuBtn.click({ force: true });
+      await this.page.waitForTimeout(2000);
+
+      const pubConfirmBtn = this.webFrame.getByRole('button', { name: '确 定' });
+      if (await pubConfirmBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+        await pubConfirmBtn.click();
+        await this.page.waitForTimeout(2000);
+      }
+    } else {
+      console.log('[publishAndSelectProject] WARNING: 未找到「发布菜单」');
+    }
   }
 
   // ── 下一步/关闭/完成 ──

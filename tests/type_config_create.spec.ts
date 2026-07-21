@@ -22,17 +22,10 @@ test.describe('工单类型 — 创建与发布（冒烟）', () => {
 
     // 流程设计：全局设置绑定主表单 → 工单池节点配置 → 抢单人操作 → 结束节点
     await typeConfigPage.configureProcess();
-    await typeConfigPage.publishAndSelectProject('测试项目');
+    // publishAndSelectProject 内部已完成：发布 → 选择项目 → 完成 → 启用 → 发布菜单
+    await typeConfigPage.publishAndSelectProject('测试项目', typeName);
 
-    // 回到类型列表 → 重置刷新 → 验证
-    // 如果发布没有触发跳转，用关闭+完成回列表
-    const resetVisible = await typeConfigPage.resetButton.isVisible({ timeout: 3000 }).catch(() => false);
-    if (!resetVisible) {
-      await typeConfigPage.clickClose();
-      await typeConfigPage.clickCompleteInProcess();
-    }
-    await typeConfigPage.resetButton.click();
-    await typeConfigPage.waitForLoad();
+    // 验证类型出现在列表中
     await typeConfigPage.assertTypeExists(typeName);
   });
 
